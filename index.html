@@ -1,0 +1,2708 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="quantium-clicker.vercel.app"/>
+  <title>Quantium AI Clicker</title>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ----------------------------------------------------
+       DESIGN SYSTEM & CSS VARIABLES
+       ---------------------------------------------------- */
+    :root {
+      --bg-dark: #03060f;
+      --bg-light: #070d1d;
+      --panel-bg: rgba(6, 12, 30, 0.75);
+      --panel-border: rgba(0, 242, 254, 0.18);
+      --panel-border-hover: rgba(0, 242, 254, 0.4);
+      
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-pink: #ff007f;
+      --accent-purple: #bd00ff;
+      --accent-green: #00ffcc;
+      --accent-red: #ff2d55;
+      
+      --glow-cyan: rgba(0, 242, 254, 0.5);
+      --glow-pink: rgba(255, 0, 127, 0.5);
+      --glow-purple: rgba(189, 0, 255, 0.5);
+      --glow-green: rgba(0, 255, 204, 0.5);
+      --glow-red: rgba(255, 45, 85, 0.6);
+      
+      --text-main: #f0f4ff;
+      --text-dim: #8496b8;
+      --text-dark: #374663;
+      
+      --font-display: 'Outfit', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--panel-border);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 50% 50%, var(--bg-light) 0%, var(--bg-dark) 100%);
+      color: var(--text-main);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Background Canvas and Overlays */
+    #space-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #particles-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* ----------------------------------------------------
+       LAYOUT
+       ---------------------------------------------------- */
+    .app-wrapper {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 350px 1fr 390px;
+      gap: 20px;
+      width: 100vw;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    @media (max-width: 1200px) {
+      .app-wrapper {
+        grid-template-columns: 310px 1fr 340px;
+        gap: 15px;
+        padding: 15px;
+      }
+    }
+
+    /* Glassmorphism Panel */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5),
+                  inset 0 0 15px rgba(0, 242, 254, 0.05);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .glass-panel:hover {
+      border-color: var(--panel-border-hover);
+    }
+
+    /* Header styling */
+    .reactor-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 15px;
+    }
+
+    .reactor-header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 25px rgba(0, 242, 254, 0.3);
+    }
+
+    .reactor-header .sub {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent-green);
+      text-transform: uppercase;
+      margin-top: 4px;
+      letter-spacing: 1.5px;
+    }
+
+    /* ----------------------------------------------------
+       LEFT COLUMN (DASHBOARD)
+       ---------------------------------------------------- */
+    .balance-card {
+      text-align: center;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      padding: 22px 15px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      position: relative;
+    }
+
+    .balance-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    }
+
+    .balance-card .lbl {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+    }
+
+    .balance-card .val {
+      font-family: var(--font-mono);
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 8px 0;
+      text-shadow: 0 0 20px var(--glow-cyan);
+      word-break: break-all;
+    }
+
+    .balance-card .val.overload-flash {
+      animation: neon-flash 0.5s infinite alternate;
+    }
+
+    .balance-card .pps-val {
+      font-size: 0.95rem;
+      color: var(--accent-green);
+      font-weight: 600;
+      text-shadow: 0 0 10px var(--glow-green);
+    }
+
+    /* Combo system */
+    .combo-section {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .combo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .combo-header span {
+      font-family: var(--font-mono);
+      font-weight: bold;
+      color: var(--accent-pink);
+    }
+
+    .combo-bar-outer {
+      height: 6px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .combo-bar-inner {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-pink));
+      box-shadow: 0 0 10px var(--accent-pink);
+      transition: width 0.1s linear;
+    }
+
+    /* Sound Synthesizer UI */
+    .audio-card {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .audio-card h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .audio-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .audio-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .audio-btn.active {
+      background: rgba(0, 242, 254, 0.15);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+      color: #fff;
+    }
+
+    .audio-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .audio-visualizer-box {
+      height: 50px;
+      background: #010307;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      position: relative;
+    }
+
+    #audio-visualizer {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ----------------------------------------------------
+       CENTER COLUMN (CORE SINGULARITY)
+       ---------------------------------------------------- */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .core-reactor-container {
+      flex: 1;
+      position: relative;
+      background: rgba(6, 12, 30, 0.4);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 50px rgba(0, 242, 254, 0.06);
+      overflow: hidden;
+      perspective: 1000px;
+    }
+
+    .core-tilt-wrapper {
+      width: 330px;
+      height: 330px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #coreCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    /* Ring glowing outline around core */
+    .core-orbit-ring {
+      position: absolute;
+      width: 390px;
+      height: 390px;
+      border: 1px dashed rgba(0, 242, 254, 0.2);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: rotate-orbit 45s linear infinite;
+    }
+
+    .core-orbit-ring::after {
+      content: '';
+      position: absolute;
+      top: -6px; left: 50%;
+      width: 12px; height: 12px;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 12px var(--accent-cyan);
+      border-radius: 50%;
+    }
+
+    /* Boss Anomaly Overlays */
+    .boss-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(18, 3, 7, 0.88);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 30px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      border: 2px solid var(--accent-red);
+      box-shadow: inset 0 0 45px rgba(255, 45, 85, 0.25);
+    }
+
+    .boss-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .boss-overlay h2 {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.7rem;
+      color: var(--accent-red);
+      text-shadow: 0 0 15px var(--glow-red);
+      letter-spacing: 2.5px;
+      animation: blink-boss 1s infinite;
+      text-align: center;
+    }
+
+    .boss-desc {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-align: center;
+      max-width: 330px;
+    }
+
+    .boss-health-bar {
+      width: 80%;
+      max-width: 360px;
+      height: 12px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--accent-red);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .boss-health-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff2d55, #ff007f);
+      box-shadow: 0 0 10px var(--accent-pink);
+      transition: width 0.1s ease;
+    }
+
+    .boss-health-text {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 10px;
+      color: #fff;
+      font-weight: bold;
+      top: 0;
+    }
+
+    /* Hacker Terminal log */
+    .terminal-container {
+      height: 155px;
+      background: rgba(1, 3, 8, 0.93);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(0, 242, 254, 0.1);
+      padding-bottom: 4px;
+    }
+
+    .terminal-log {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent-green);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scrollbar-width: thin;
+    }
+
+    .terminal-log p {
+      line-height: 1.3;
+      white-space: pre-wrap;
+    }
+
+    .terminal-log p.warn { color: var(--accent-red); }
+    .terminal-log p.achiev { color: var(--accent-purple); font-weight: bold; }
+    .terminal-log p.system { color: var(--accent-cyan); }
+    .terminal-log p.prestige { color: var(--accent-pink); font-weight: bold; }
+
+    /* ----------------------------------------------------
+       RIGHT COLUMN (TABS & SHOP)
+       ---------------------------------------------------- */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: 100%;
+    }
+
+    .tab-nav {
+      display: flex;
+      background: rgba(0,0,0,0.4);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      padding: 10px 4px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--accent-cyan);
+      box-shadow: inset 0 0 12px rgba(0, 242, 254, 0.06);
+      border: 1px solid rgba(0, 242, 254, 0.18);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: #fff;
+    }
+
+    .tab-content-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .tab-content {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateY(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .tab-content.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    /* Upgrade Cards */
+    .upgrade-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upgrade-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent-blue);
+      opacity: 0.3;
+    }
+
+    .upgrade-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(0, 242, 254, 0.15);
+    }
+
+    .upgrade-info {
+      flex: 1;
+    }
+
+    .upgrade-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .upgrade-qty {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .upgrade-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 3px;
+    }
+
+    .upgrade-btn {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      border: none;
+      color: #010614;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    .upgrade-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    }
+
+    .upgrade-btn:active {
+      transform: translateY(1px);
+    }
+
+    .upgrade-item.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .upgrade-item.disabled .upgrade-btn {
+      background: #1c273d;
+      color: var(--text-dim);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* Prestige Screen (Dark Matter Tab) */
+    .prestige-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      padding: 15px 0;
+      text-align: center;
+    }
+
+    .prestige-title {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--accent-pink);
+      text-shadow: 0 0 10px var(--glow-pink);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .prestige-count {
+      font-family: var(--font-mono);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 0 20px var(--glow-pink);
+    }
+
+    .prestige-desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      max-width: 280px;
+      line-height: 1.4;
+    }
+
+    .prestige-trigger-btn {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+      border: none;
+      color: #fff;
+      font-family: var(--font-display);
+      font-weight: bold;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 20px var(--glow-purple);
+      transition: all 0.25s ease;
+      width: 100%;
+      text-transform: uppercase;
+    }
+
+    .prestige-trigger-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px var(--glow-pink);
+    }
+
+    .prestige-trigger-btn:disabled {
+      background: #1b1626;
+      color: var(--text-dim);
+      box-shadow: none;
+      cursor: not-allowed;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* Tech Node upgrades */
+    .tech-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 15px;
+    }
+
+    .tech-item {
+      background: rgba(189, 0, 255, 0.03);
+      border: 1px solid rgba(189, 0, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+
+    .tech-item::before {
+      background: var(--accent-purple);
+    }
+
+    .tech-item:hover {
+      border-color: rgba(189, 0, 255, 0.3);
+      background: rgba(189, 0, 255, 0.05);
+    }
+
+    .tech-item.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .tech-item.disabled .tech-buy-btn {
+      background: #1b1626;
+      color: var(--text-dim);
+      box-shadow: none;
+    }
+
+    .tech-buy-btn {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+      border: none;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(189, 0, 255, 0.3);
+    }
+
+    /* Archive (Stats & Achievements) */
+    .stat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(0,0,0,0.15);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+
+    .stat-row span:first-child {
+      color: var(--text-dim);
+    }
+
+    .stat-row span:last-child {
+      font-family: var(--font-mono);
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .achievements-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 15px;
+    }
+
+    .achievements-grid h4 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .achievement-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.5;
+      transition: all 0.3s ease;
+    }
+
+    .achievement-item.unlocked {
+      opacity: 1;
+      background: rgba(0, 255, 204, 0.03);
+      border-color: rgba(0, 255, 204, 0.2);
+    }
+
+    .ach-icon {
+      font-size: 1.2rem;
+      filter: grayscale(100%);
+      transition: filter 0.3s ease;
+    }
+
+    .achievement-item.unlocked .ach-icon {
+      filter: grayscale(0%);
+    }
+
+    .ach-details {
+      flex: 1;
+    }
+
+    .ach-title {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .ach-desc {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* Config Tab */
+    .config-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-action.danger {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .btn-action.danger:hover {
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    .import-export-textarea {
+      background: #02040a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 8px;
+      height: 80px;
+      resize: none;
+    }
+
+    /* ----------------------------------------------------
+       FLOATING ELEMENTS (CANVAS PHYSICS SPARKS AND FLOATS)
+       ---------------------------------------------------- */
+    .float-dmg {
+      position: fixed;
+      pointer-events: none;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--accent-cyan);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+      animation: float-slide 0.7s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      z-index: 200;
+    }
+
+    .float-dmg.crit {
+      font-size: 1.65rem;
+      color: var(--accent-pink);
+      text-shadow: 0 0 12px var(--glow-pink);
+      animation: float-slide-crit 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes float-slide {
+      0% { opacity: 1; transform: translate3d(0, 0, 0) scale(0.85); }
+      100% { opacity: 0; transform: translate3d(0, -65px, 0) scale(1.1); }
+    }
+
+    @keyframes float-slide-crit {
+      0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1) rotate(-6deg); }
+      20% { transform: translate3d(0, -10px, 0) scale(1.3) rotate(6deg); }
+      100% { opacity: 0; transform: translate3d(0, -85px, 0) scale(1.05) rotate(-12deg); }
+    }
+
+    /* Quantum Comet */
+    .quantum-comet {
+      position: fixed;
+      width: 25px;
+      height: 25px;
+      background: radial-gradient(circle, #fff 20%, var(--accent-cyan) 60%, transparent 100%);
+      box-shadow: 0 0 15px var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 150;
+      pointer-events: auto;
+      transition: transform 0.1s ease;
+      filter: drop-shadow(0 0 8px var(--accent-cyan));
+    }
+
+    .quantum-comet:hover {
+      transform: scale(1.2);
+    }
+
+    /* ----------------------------------------------------
+       KEYFRAME ANIMATIONS
+       ---------------------------------------------------- */
+    @keyframes neon-flash {
+      from { text-shadow: 0 0 15px var(--glow-cyan); }
+      to { text-shadow: 0 0 35px var(--accent-cyan), 0 0 18px var(--accent-pink); }
+    }
+
+    @keyframes blink-boss {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes rotate-orbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Screen shake for crits / collapse / boss */
+    .shake {
+      animation: shake-screen 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes shake-screen {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .screen-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .screen-overlay.collapse-flash {
+      background: #fff;
+      opacity: 1;
+      animation: fade-white 1.6s ease-out forwards;
+    }
+
+    @keyframes fade-white {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="screen-overlay" class="screen-overlay"></div>
+  <canvas id="space-bg"></canvas>
+  <canvas id="particles-overlay"></canvas>
+
+  <div class="app-wrapper" id="app">
+    <!-- ==================== LEFT COLUMN ==================== -->
+    <aside class="glass-panel left-column">
+      <div class="reactor-header">
+        <h1>ANTIGRAVITY</h1>
+        <div class="sub">Singularity Engine v3.5</div>
+      </div>
+
+      <div class="balance-card">
+        <div class="lbl">Quantum Energy</div>
+        <div id="balance-val" class="val">0</div>
+        <div class="pps-val">+<span id="pps-val">0</span> / сек</div>
+      </div>
+
+      <div class="combo-section">
+        <div class="combo-header">
+          <span>COMBO MULTIPLIER</span>
+          <span id="combo-multiplier-val">x1.0</span>
+        </div>
+        <div class="combo-bar-outer">
+          <div id="combo-bar" class="combo-bar-inner"></div>
+        </div>
+      </div>
+
+      <!-- Live Synthesizer Config -->
+      <div class="audio-card">
+        <h3>Live Audio Synthesizer</h3>
+        <div class="audio-controls">
+          <button id="sfx-toggle" class="audio-btn active">
+            🔊 SFX ON
+          </button>
+          <button id="bgm-toggle" class="audio-btn">
+            🎵 BGM OFF
+          </button>
+        </div>
+        <div class="audio-visualizer-box">
+          <canvas id="audio-visualizer"></canvas>
+        </div>
+      </div>
+
+      <!-- Basic instructions -->
+      <div style="font-size: 0.75rem; color: var(--text-dim); line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+        <span style="color: var(--accent-cyan); font-weight: bold;">[СОВЕТ]:</span> Накапливайте энергию комбо для входа в <strong>Квантовую перегрузку</strong>. Ловите пролетающие кометы и отражайте босс-аномалии!
+      </div>
+    </aside>
+
+    <!-- ==================== CENTER COLUMN ==================== -->
+    <main class="center-column">
+      <div class="core-reactor-container" id="reactor-container">
+        <!-- Orbit dashed ring -->
+        <div class="core-orbit-ring"></div>
+        
+        <!-- Tilt interaction container -->
+        <div class="core-tilt-wrapper" id="core-tilt">
+          <canvas id="coreCanvas" width="500" height="500"></canvas>
+        </div>
+
+        <!-- Boss Warning Screen -->
+        <div id="boss-panel" class="boss-overlay">
+          <h2>ГРАВИТАЦИОННАЯ АНОМАЛИЯ!</h2>
+          <p class="boss-desc">
+            Автоматическое производство заблокировано гравитационной петлей. Атакуйте сингулярность вручную, чтобы рассеять аномалию!
+          </p>
+          <div class="boss-health-bar">
+            <div id="boss-hp-bar" class="boss-health-fill"></div>
+            <div id="boss-hp-text" class="boss-health-text">0 / 0 HP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hacker Terminal Console -->
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <span>SYSTEM TERMINAL</span>
+          <span id="terminal-status">ONLINE</span>
+        </div>
+        <div id="terminal-log" class="terminal-log">
+          <p class="system">[INIT] Загрузка квантового ядра Antigravity v3.5...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== RIGHT COLUMN ==================== -->
+    <aside class="glass-panel right-column">
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="shop">Ядро</button>
+        <button class="tab-btn" data-tab="darkmatter">Анигилятор</button>
+        <button class="tab-btn" data-tab="archive">Архив</button>
+        <button class="tab-btn" data-tab="config">Конфиг</button>
+      </nav>
+
+      <div class="tab-content-container">
+        <!-- TAB 1: UPGRADES -->
+        <div id="tab-shop" class="tab-content active">
+          <!-- Active upgrade list -->
+          <div id="active-upgrades" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <!-- Passive upgrades (drones) -->
+          <div id="passive-upgrades" style="display:flex; flex-direction:column; gap:8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;"></div>
+        </div>
+
+        <!-- TAB 2: DARK MATTER -->
+        <div id="tab-darkmatter" class="tab-content">
+          <div class="prestige-container">
+            <div class="prestige-title">Накопленная Темная Материя</div>
+            <div id="darkmatter-val" class="prestige-count">0</div>
+            <p class="prestige-desc">
+              Сжатие текущей вселенной высвободит колоссальную энергию, обнулит ресурсы и автоматизацию, но даст постоянный бонус к сингулярности.
+            </p>
+            <button id="collapse-btn" class="prestige-trigger-btn" disabled>
+              Коллапс Вселенной (+0 ТМ)
+            </button>
+          </div>
+          <div class="tech-grid" id="tech-upgrades"></div>
+        </div>
+
+        <!-- TAB 3: ARCHIVE -->
+        <div id="tab-archive" class="tab-content">
+          <div class="stat-list">
+            <div class="stat-row"><span>Всего кликов</span><span id="stat-clicks">0</span></div>
+            <div class="stat-row"><span>Критические клики</span><span id="stat-crits">0</span></div>
+            <div class="stat-row"><span>Всего добыто QE</span><span id="stat-total-qe">0</span></div>
+            <div class="stat-row"><span>Поймано комет</span><span id="stat-comets">0</span></div>
+            <div class="stat-row"><span>Аномалий рассеяно</span><span id="stat-anomalies">0</span></div>
+            <div class="stat-row"><span>Сжатий сингулярности</span><span id="stat-prestiged">0</span></div>
+            <div class="stat-row"><span>Время реактора</span><span id="stat-time">0 с</span></div>
+          </div>
+
+          <div class="achievements-grid">
+            <h4>Квантовые Заслуги</h4>
+            <div id="achievements-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+        </div>
+
+        <!-- TAB 4: CONFIG -->
+        <div id="tab-config" class="tab-content">
+          <div class="config-box">
+            <button id="save-btn" class="btn-action">Сохранить систему</button>
+            <button id="export-btn" class="btn-action">Экспорт кода сохранения</button>
+            <textarea id="import-export-area" class="import-export-textarea" placeholder="Код экспорта/импорта появится здесь..."></textarea>
+            <button id="import-btn" class="btn-action">Импортировать сохранение</button>
+            <button id="reset-btn" class="btn-action danger" style="margin-top: 15px; box-shadow: 0 0 15px var(--glow-red);">СБРОСИТЬ ВСЁ</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ==================== GAME ENGINE ==================== -->
+  <script>
+    /* ----------------------------------------------------
+       AUDIO SYNTHESIZER MANAGER (WITH FEEDBACK DELAY ECHO)
+       ---------------------------------------------------- */
+    class AudioManager {
+      constructor() {
+        this.ctx = null;
+        this.sfxEnabled = true;
+        this.bgmEnabled = false;
+        
+        // Synths and audio components
+        this.analyser = null;
+        this.masterVolume = null;
+        this.delayNode = null;
+        this.feedbackGain = null;
+        this.bgmInterval = null;
+        this.visualizerCanvas = document.getElementById('audio-visualizer');
+        this.visualizerCtx = this.visualizerCanvas.getContext('2d');
+        
+        this.initVisualizerSize();
+        window.addEventListener('resize', () => this.initVisualizerSize());
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContextClass();
+        
+        this.masterVolume = this.ctx.createGain();
+        this.masterVolume.gain.value = 0.75;
+        
+        this.analyser = this.ctx.createAnalyser();
+        this.analyser.fftSize = 64;
+        
+        // Feedback Delay setup for space echo
+        this.delayNode = this.ctx.createDelay();
+        this.delayNode.delayTime.value = 0.35; // 350ms echo
+        
+        this.feedbackGain = this.ctx.createGain();
+        this.feedbackGain.gain.value = 0.45; // 45% echo volume feedback
+        
+        // Connect echo path
+        this.delayNode.connect(this.feedbackGain);
+        this.feedbackGain.connect(this.delayNode);
+        
+        // Connect components
+        this.masterVolume.connect(this.analyser);
+        this.analyser.connect(this.ctx.destination);
+        
+        // Delay is connected in parallel so dry signal remains clean
+        this.masterVolume.connect(this.delayNode);
+        this.delayNode.connect(this.analyser);
+        
+        this.startVisualizerLoop();
+        this.startBGMLoop();
+      }
+
+      initVisualizerSize() {
+        const rect = this.visualizerCanvas.parentNode.getBoundingClientRect();
+        this.visualizerCanvas.width = rect.width;
+        this.visualizerCanvas.height = rect.height;
+      }
+
+      playSFX(type, options = {}) {
+        if (!this.ctx || !this.sfxEnabled) return;
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+
+        const now = this.ctx.currentTime;
+
+        if (type === 'click') {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = 'triangle';
+          const combo = options.combo || 1;
+          const baseFreq = 220 + (combo * 45);
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(75, now + 0.08);
+          
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          
+          osc.connect(gain);
+          gain.connect(this.masterVolume);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        }
+        else if (type === 'crit') {
+          // Deep booming sub-hit with resonance noise
+          const osc = this.ctx.createOscillator();
+          const noise = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+          
+          noise.type = 'sawtooth';
+          noise.frequency.setValueAtTime(750, now);
+          noise.frequency.exponentialRampToValueAtTime(90, now + 0.18);
+          
+          gain.gain.setValueAtTime(0.45, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          
+          osc.connect(gain);
+          noise.connect(gain);
+          gain.connect(this.masterVolume);
+          
+          osc.start(now);
+          noise.start(now);
+          osc.stop(now + 0.3);
+          noise.stop(now + 0.3);
+        }
+        else if (type === 'upgrade') {
+          // Arpeggiated melody sweep
+          const root = options.root || 280;
+          [0, 1.25, 1.5, 2, 2.5].forEach((interval, idx) => {
+            if (interval === 0) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(root * interval, now + (idx * 0.04));
+            gain.gain.setValueAtTime(0.12, now + (idx * 0.04));
+            gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.04) + 0.18);
+            
+            osc.connect(gain);
+            gain.connect(this.masterVolume);
+            osc.start(now + (idx * 0.04));
+            osc.stop(now + (idx * 0.04) + 0.18);
+          });
+        }
+        else if (type === 'boss_alert') {
+          // Warning space siren
+          for (let i = 0; i < 4; i++) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, now + i * 0.22);
+            osc.frequency.linearRampToValueAtTime(460, now + i * 0.22 + 0.12);
+            
+            gain.gain.setValueAtTime(0.15, now + i * 0.22);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.22 + 0.2);
+            
+            osc.connect(gain);
+            gain.connect(this.masterVolume);
+            osc.start(now + i * 0.22);
+            osc.stop(now + i * 0.22 + 0.2);
+          }
+        }
+        else if (type === 'comet') {
+          // High synth wind sweep
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(550, now);
+          osc.frequency.exponentialRampToValueAtTime(1600, now + 0.45);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          
+          osc.connect(gain);
+          gain.connect(this.masterVolume);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        }
+        else if (type === 'collapse') {
+          // Extreme black hole compression sweep
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(650, now);
+          osc.frequency.exponentialRampToValueAtTime(15, now + 2.0);
+          
+          gain.gain.setValueAtTime(0.6, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + 2.0);
+          
+          osc.connect(gain);
+          gain.connect(this.masterVolume);
+          osc.start(now);
+          osc.stop(now + 2.0);
+        }
+      }
+
+      startBGMLoop() {
+        // Space pads arpeggiator sequencer
+        let chordIndex = 0;
+        const chords = [
+          [130.81, 164.81, 196.00, 261.63], // C Major 7
+          [110.00, 138.59, 164.81, 220.00], // A minor 7 detuned
+          [146.83, 174.61, 220.00, 293.66], // D minor 7
+          [116.54, 138.59, 174.61, 233.08]  // Bb Major 7
+        ];
+
+        const playTick = () => {
+          if (!this.bgmEnabled || !this.ctx) return;
+          if (this.ctx.state === 'suspended') return;
+          
+          const now = this.ctx.currentTime;
+          const chord = chords[chordIndex];
+          chordIndex = (chordIndex + 1) % chords.length;
+
+          // Sequential note trigger
+          chord.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            osc.type = 'sine';
+            // Scale octave
+            osc.frequency.setValueAtTime(freq * 2, now + i * 0.7);
+            
+            gain.gain.setValueAtTime(0, now + i * 0.7);
+            gain.gain.linearRampToValueAtTime(0.05, now + i * 0.7 + 0.9);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.7 + 3.2);
+            
+            osc.connect(gain);
+            gain.connect(this.masterVolume);
+            osc.start(now + i * 0.7);
+            osc.stop(now + i * 0.7 + 3.2);
+          });
+        };
+
+        this.bgmInterval = setInterval(playTick, 6000);
+      }
+
+      startVisualizerLoop() {
+        const renderVisualizer = () => {
+          requestAnimationFrame(renderVisualizer);
+          if (!this.analyser) return;
+
+          const bufferLength = this.analyser.frequencyBinCount;
+          const dataArray = new Uint8Array(bufferLength);
+          this.analyser.getByteFrequencyData(dataArray);
+
+          const w = this.visualizerCanvas.width;
+          const h = this.visualizerCanvas.height;
+          const ctx = this.visualizerCtx;
+
+          ctx.fillStyle = '#010307';
+          ctx.fillRect(0, 0, w, h);
+
+          const barWidth = (w / bufferLength) * 1.6;
+          let barHeight;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArray[i] / 2.3;
+
+            // Neon cyan to pink spectral gradient
+            const grad = ctx.createLinearGradient(x, h, x, h - barHeight);
+            grad.addColorStop(0, 'rgba(0, 242, 254, 0.25)');
+            grad.addColorStop(1, 'rgba(255, 0, 127, 0.85)');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, h - barHeight, barWidth - 1.5, barHeight);
+
+            x += barWidth;
+          }
+        };
+        renderVisualizer();
+      }
+    }
+
+    /* ----------------------------------------------------
+       BACKGROUND NEBULA & STARS RENDERER
+       ---------------------------------------------------- */
+    class SpaceBackground {
+      constructor() {
+        this.canvas = document.getElementById('space-bg');
+        this.ctx = this.canvas.getContext('2d');
+        this.stars = [];
+        this.resize();
+        
+        window.addEventListener('resize', () => this.resize());
+        this.initStars();
+        this.animate();
+      }
+
+      resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      initStars() {
+        this.stars = [];
+        const count = 150;
+        for (let i = 0; i < count; i++) {
+          this.stars.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            size: Math.random() * 1.9 + 0.1,
+            brightness: Math.random(),
+            twinkleSpeed: 0.004 + Math.random() * 0.016
+          });
+        }
+      }
+
+      animate() {
+        const render = () => {
+          requestAnimationFrame(render);
+          const w = this.canvas.width;
+          const h = this.canvas.height;
+          const ctx = this.ctx;
+
+          ctx.fillStyle = '#03060f';
+          ctx.fillRect(0, 0, w, h);
+
+          // Deep galactic center nebula glow
+          const radialGrad = ctx.createRadialGradient(w/2, h/2, 20, w/2, h/2, w/1.1);
+          radialGrad.addColorStop(0, 'rgba(11, 20, 41, 0.85)');
+          radialGrad.addColorStop(0.5, 'rgba(6, 10, 24, 0.55)');
+          radialGrad.addColorStop(1, 'rgba(3, 5, 15, 0.95)');
+          ctx.fillStyle = radialGrad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Twinkling points
+          ctx.fillStyle = '#ffffff';
+          this.stars.forEach(star => {
+            star.brightness += star.twinkleSpeed;
+            if (star.brightness > 1 || star.brightness < 0) {
+              star.twinkleSpeed *= -1;
+            }
+            ctx.globalAlpha = Math.abs(star.brightness);
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 1.0;
+        };
+        render();
+      }
+    }
+
+    /* ----------------------------------------------------
+       PARTICLES SYSTEM (EXPLOSION SPARKS)
+       ---------------------------------------------------- */
+    class ClickParticleSystem {
+      constructor() {
+        this.canvas = document.getElementById('particles-overlay');
+        this.ctx = this.canvas.getContext('2d');
+        this.particles = [];
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.startLoop();
+      }
+
+      resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      spawnExplosion(x, y, count = 15, isCrit = false, isSupercharged = false) {
+        const colorPalette = isCrit 
+          ? ['#ff007f', '#ff3366', '#ff00cc', '#ffffff'] 
+          : (isSupercharged ? ['#00ffcc', '#ff007f', '#00f2fe', '#bd00ff'] : ['#00f2fe', '#4facfe', '#00ffcc', '#ffffff']);
+          
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * (isCrit ? 6.5 : 4.5) + 2.5;
+          this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - (Math.random() * 2.5),
+            size: Math.random() * (isCrit ? 4.8 : 3.2) + 1.2,
+            color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+            alpha: 1,
+            decay: 0.01 + Math.random() * 0.018,
+            gravity: 0.09
+          });
+        }
+      }
+
+      startLoop() {
+        const update = () => {
+          requestAnimationFrame(update);
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.particles.forEach((p, idx) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.alpha -= p.decay;
+
+            if (p.alpha <= 0) {
+              this.particles.splice(idx, 1);
+              return;
+            }
+
+            this.ctx.save();
+            this.ctx.globalAlpha = p.alpha;
+            this.ctx.fillStyle = p.color;
+            this.ctx.shadowBlur = 12;
+            this.ctx.shadowColor = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+          });
+        };
+        update();
+      }
+    }
+
+    /* ----------------------------------------------------
+       CORE SINGULARITY REACTOR CANVAS
+       ---------------------------------------------------- */
+    class SingularityRenderer {
+      constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.angle = 0;
+        this.rotationSpeed = 0.02;
+        this.energyRadius = 75;
+        this.targetEnergyRadius = 75;
+        this.accretionDiskParticles = [];
+        this.supercharged = false;
+        
+        // Orbital representations of drones purchased
+        this.dronesVisualCount = 0;
+        
+        this.initAccretionDisk();
+        this.animate();
+      }
+
+      initAccretionDisk() {
+        this.accretionDiskParticles = [];
+        const count = 130;
+        for (let i = 0; i < count; i++) {
+          const distance = Math.random() * 90 + 75;
+          this.accretionDiskParticles.push({
+            distance: distance,
+            angle: Math.random() * Math.PI * 2,
+            speed: (0.008 + Math.random() * 0.018) * (135 / distance), 
+            size: Math.random() * 2.2 + 0.4,
+            hue: Math.random() < 0.22 ? 310 : 195 
+          });
+        }
+      }
+
+      triggerClickImpact(isCrit = false) {
+        this.energyRadius = isCrit ? 108 : 94;
+        this.rotationSpeed = Math.min(0.28, this.rotationSpeed + (isCrit ? 0.07 : 0.035));
+      }
+
+      setDronesVisual(count) {
+        this.dronesVisualCount = count;
+      }
+
+      animate() {
+        const render = () => {
+          requestAnimationFrame(render);
+          const w = this.canvas.width;
+          const h = this.canvas.height;
+          const ctx = this.ctx;
+          const cx = w / 2;
+          const cy = h / 2;
+
+          ctx.clearRect(0, 0, w, h);
+
+          // Value decay
+          this.energyRadius += (this.targetEnergyRadius - this.energyRadius) * 0.12;
+          this.rotationSpeed += ((this.supercharged ? 0.11 : 0.015) - this.rotationSpeed) * 0.022;
+          this.angle += this.rotationSpeed;
+
+          // 1. Accretion Disk particles (orbits)
+          ctx.save();
+          this.accretionDiskParticles.forEach(p => {
+            p.angle += p.speed * (this.rotationSpeed / 0.02);
+            
+            // Orbital projection
+            const px = cx + Math.cos(p.angle) * p.distance;
+            const py = cy + Math.sin(p.angle) * p.distance * 0.48; 
+
+            ctx.beginPath();
+            ctx.arc(px, py, p.size, 0, Math.PI * 2);
+            const opacity = 0.35 + (Math.sin(p.angle) + 1.2)/2.4;
+            ctx.fillStyle = `hsla(${this.supercharged ? (this.angle * 45) % 360 : p.hue}, 95%, 68%, ${opacity})`;
+            ctx.shadowBlur = p.size * 2.6;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.fill();
+          });
+          ctx.restore();
+
+          // 2. Space distortion ring
+          ctx.save();
+          ctx.strokeStyle = this.supercharged ? 'rgba(255, 0, 127, 0.45)' : 'rgba(0, 242, 254, 0.28)';
+          ctx.lineWidth = 2;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.beginPath();
+          ctx.arc(cx, cy, this.energyRadius + 15, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // 3. Glowing accretion halo
+          ctx.save();
+          const radialGradDisk = ctx.createRadialGradient(cx, cy, this.energyRadius - 12, cx, cy, this.energyRadius + 10);
+          if (this.supercharged) {
+            radialGradDisk.addColorStop(0, 'rgba(189, 0, 255, 0.85)');
+            radialGradDisk.addColorStop(0.5, 'rgba(255, 0, 127, 0.95)');
+            radialGradDisk.addColorStop(1, 'rgba(255, 0, 127, 0)');
+          } else {
+            radialGradDisk.addColorStop(0, 'rgba(0, 242, 254, 0.85)');
+            radialGradDisk.addColorStop(0.5, 'rgba(79, 172, 254, 0.95)');
+            radialGradDisk.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          }
+          ctx.fillStyle = radialGradDisk;
+          ctx.beginPath();
+          ctx.arc(cx, cy, this.energyRadius + 14, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // 4. Centered Black Hole core
+          ctx.save();
+          ctx.shadowBlur = 45;
+          ctx.shadowColor = this.supercharged ? '#ff007f' : '#00f2fe';
+          ctx.fillStyle = '#000000';
+          ctx.beginPath();
+          ctx.arc(cx, cy, this.energyRadius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Vortex spiral lines
+          ctx.strokeStyle = this.supercharged ? 'rgba(255, 0, 127, 0.75)' : 'rgba(0, 242, 254, 0.45)';
+          ctx.lineWidth = 3;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.beginPath();
+          for (let i = 0; i < 4; i++) {
+            const rotAngle = this.angle + (i * Math.PI / 2);
+            ctx.moveTo(cx, cy);
+            ctx.quadraticCurveTo(
+              cx + Math.cos(rotAngle + 0.42) * (this.energyRadius * 0.65),
+              cy + Math.sin(rotAngle + 0.42) * (this.energyRadius * 0.65),
+              cx + Math.cos(rotAngle) * this.energyRadius,
+              cy + Math.sin(rotAngle) * this.energyRadius
+            );
+          }
+          ctx.stroke();
+          ctx.restore();
+
+          // 5. Draw Drones as orbiting bodies around reactor
+          if (this.dronesVisualCount > 0) {
+            ctx.save();
+            const drawCount = Math.min(10, this.dronesVisualCount); // Clamp rendering to prevent lag
+            for (let i = 0; i < drawCount; i++) {
+              const baseOrbitRad = 170 + (i * 12);
+              const speed = 0.005 + (0.01 / (i + 1));
+              const currentOrbitalAngle = (this.angle * 0.5) + (i * (Math.PI * 2 / drawCount));
+              
+              const dx = cx + Math.cos(currentOrbitalAngle) * baseOrbitRad;
+              const dy = cy + Math.sin(currentOrbitalAngle) * baseOrbitRad * 0.42;
+
+              // Draw orbital path dashed
+              ctx.strokeStyle = 'rgba(0, 242, 254, 0.04)';
+              ctx.beginPath();
+              ctx.ellipse(cx, cy, baseOrbitRad, baseOrbitRad * 0.42, 0, 0, Math.PI*2);
+              ctx.stroke();
+
+              // Draw Drone
+              ctx.beginPath();
+              ctx.arc(dx, dy, 5, 0, Math.PI*2);
+              ctx.fillStyle = '#00ffcc';
+              ctx.shadowBlur = 8;
+              ctx.shadowColor = '#00ffcc';
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+        };
+        render();
+      }
+    }
+
+    /* ----------------------------------------------------
+       MAIN GAME SYSTEM & CONTROLLER (MONOLITH ENGINE)
+       ---------------------------------------------------- */
+    class GameEngine {
+      constructor() {
+        // Game State Variables
+        this.balance = 0;
+        this.totalEarned = 0;
+        this.clickPower = 1;
+        this.pps = 0;
+        
+        // Active click mechanics
+        this.combo = 1.0;
+        this.comboTimer = null;
+        this.isOverloaded = false;
+        this.overloadDuration = 0;
+        this.superchargeTimer = 0;
+        
+        // Stats
+        this.clicksCount = 0;
+        this.critsCount = 0;
+        this.cometsCount = 0;
+        this.anomaliesCount = 0;
+        this.prestigeCount = 0;
+        this.totalSeconds = 0;
+
+        // Prestige resources
+        this.darkMatter = 0;
+        this.darkMatterAccumulated = 0;
+
+        // Boss Anomaly Stats
+        this.bossActive = false;
+        this.bossHP = 0;
+        this.bossMaxHP = 0;
+        this.bossName = "";
+        this.anomaliesFought = 0;
+        this.bossTimer = 120; // First boss in 120 seconds
+
+        // Managers
+        this.audio = new AudioManager();
+        this.bg = new SpaceBackground();
+        this.particles = new ClickParticleSystem();
+        this.coreRenderer = new SingularityRenderer('coreCanvas');
+
+        // Upgrades Configuration
+        this.upgrades = [
+          { id: 'active_1', name: 'Система охлаждения', type: 'active', cost: 15, val: 1, count: 0, desc: '+1 к силе клика за уровень' },
+          { id: 'active_2', name: 'Плазменные инжекторы', type: 'active', cost: 120, val: 5, count: 0, desc: '+5 к силе клика за уровень' },
+          { id: 'active_3', name: 'Гравитационный компрессор', type: 'active', cost: 850, val: 20, count: 0, desc: '+20 к силе клика за уровень' },
+          
+          { id: 'drone_1', name: 'Наноботы-сборщики', type: 'passive', cost: 50, val: 0.5, count: 0, desc: '+0.5 энергии/сек автоматически' },
+          { id: 'drone_2', name: 'Экстракторы сингулярности', type: 'passive', cost: 380, val: 4.0, count: 0, desc: '+4.0 энергии/сек автоматически' },
+          { id: 'drone_3', name: 'Квантовые репликаторы', type: 'passive', cost: 2400, val: 28.0, count: 0, desc: '+28.0 энергии/сек автоматически' },
+          { id: 'drone_4', name: 'Сферы Дайсона', type: 'passive', cost: 15000, val: 180.0, count: 0, desc: '+180.0 энергии/сек автоматически' },
+          { id: 'drone_5', name: 'Излучатели темной энергии', type: 'passive', cost: 95000, val: 1200.0, count: 0, desc: '+1200.0 энергии/сек автоматически' }
+        ];
+
+        // Dark Matter Prestige Tech Upgrades
+        this.techNodes = [
+          { id: 'tech_catalyst', name: 'Темный Катализатор', cost: 1, multiplier: 1.5, count: 0, desc: '+50% к общей силе клика за уровень' },
+          { id: 'tech_chrono', name: 'Хроноускоритель', cost: 2, multiplier: 1.3, count: 0, desc: '+30% к эффективности дронов (PPS) за уровень' },
+          { id: 'tech_entangle', name: 'Квантовая связность', cost: 3, multiplier: 0.05, count: 0, desc: '+5% к шансу критического клика (крит дает x4)' },
+          { id: 'tech_harvester', name: 'Вакуумный коллектор', cost: 5, multiplier: 0.1, count: 0, desc: 'Пассивный доход в оффлайне (10% от PPS за уровень, макс 50%)' }
+        ];
+
+        // Achievements Configuration
+        this.achievements = [
+          { id: 'ach_clicks_100', title: 'Младший инженер', desc: 'Сделать 100 кликов', condition: () => this.clicksCount >= 100, unlocked: false, icon: '🔧' },
+          { id: 'ach_energy_10k', title: 'Тепловой перегруз', desc: 'Накопить 10,000 QE', condition: () => this.totalEarned >= 10000, unlocked: false, icon: '🔥' },
+          { id: 'ach_combo_max', title: 'Сверхзвук', desc: 'Достичь квантовой перегрузки', condition: () => this.isOverloaded, unlocked: false, icon: '⚡' },
+          { id: 'ach_boss_1', title: 'Усмиритель бури', desc: 'Рассеять первую аномалию', condition: () => this.anomaliesCount >= 1, unlocked: false, icon: '🌀' },
+          { id: 'ach_dm_1', title: 'Сверхновая', desc: 'Осуществить коллапс вселенной', condition: () => this.prestigeCount >= 1, unlocked: false, icon: '🪐' }
+        ];
+
+        // Last save time for offline earnings
+        this.lastSaveTime = Date.now();
+
+        this.init();
+      }
+
+      init() {
+        this.load();
+        this.bindEvents();
+        this.renderUpgrades();
+        this.renderTechNodes();
+        this.renderAchievements();
+        this.startLoop();
+        this.startCometSpawner();
+        
+        // Setup initial visual representation of drone counts
+        this.updateVisualDronesCount();
+        
+        this.log('Квантовое ядро стабилизировано. Готово к приему команд.', 'system');
+      }
+
+      bindEvents() {
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            const target = btn.dataset.tab;
+            document.getElementById(`tab-${target}`).classList.add('active');
+          });
+        });
+
+        // 3D tilt reactor effect & click handler
+        const tiltWrapper = document.getElementById('core-tilt');
+        const reactorContainer = document.getElementById('reactor-container');
+
+        reactorContainer.addEventListener('mousemove', (e) => {
+          const rect = reactorContainer.getBoundingClientRect();
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          const dx = e.clientX - cx;
+          const dy = e.clientY - cy;
+          const rx = -(dy / (rect.height / 2)) * 20;
+          const ry = (dx / (rect.width / 2)) * 20;
+          
+          tiltWrapper.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) translateZ(20px)`;
+        });
+
+        reactorContainer.addEventListener('mouseleave', () => {
+          tiltWrapper.style.transform = `rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+        });
+
+        tiltWrapper.addEventListener('click', (e) => {
+          this.audio.init();
+          this.handleCoreClick(e);
+        });
+
+        // Configuration actions
+        document.getElementById('save-btn').addEventListener('click', () => {
+          this.save();
+          this.log('Системные координаты сохранены.', 'system');
+        });
+        document.getElementById('export-btn').addEventListener('click', () => this.exportSave());
+        document.getElementById('import-btn').addEventListener('click', () => this.importSave());
+        
+        // RESET EVERYTHING (MANDATORY REQUEST)
+        document.getElementById('reset-btn').addEventListener('click', () => this.hardReset());
+
+        // Audio controls
+        const sfxBtn = document.getElementById('sfx-toggle');
+        sfxBtn.addEventListener('click', () => {
+          this.audio.init();
+          this.audio.sfxEnabled = !this.audio.sfxEnabled;
+          sfxBtn.textContent = this.audio.sfxEnabled ? '🔊 SFX ON' : '🔇 SFX OFF';
+          sfxBtn.classList.toggle('active', this.audio.sfxEnabled);
+        });
+
+        const bgmBtn = document.getElementById('bgm-toggle');
+        bgmBtn.addEventListener('click', () => {
+          this.audio.init();
+          this.audio.bgmEnabled = !this.audio.bgmEnabled;
+          bgmBtn.textContent = this.audio.bgmEnabled ? '🎵 BGM ON' : '🎵 BGM OFF';
+          bgmBtn.classList.toggle('active', this.audio.bgmEnabled);
+        });
+
+        // Collapse trigger click
+        document.getElementById('collapse-btn').addEventListener('click', () => this.triggerCollapse());
+      }
+
+      /* ----------------------------------------------------
+         CORE CLICK HANDLER
+         ---------------------------------------------------- */
+      handleCoreClick(e) {
+        if (this.bossActive) {
+          this.damageBoss();
+          return;
+        }
+
+        this.clicksCount++;
+        
+        const entangleNode = this.techNodes.find(n => n.id === 'tech_entangle');
+        const critChance = 0.08 + (entangleNode.count * entangleNode.multiplier);
+        const isCrit = Math.random() < critChance;
+
+        let power = this.getClickPower();
+
+        if (isCrit) {
+          power *= 4;
+          this.critsCount++;
+          this.audio.playSFX('crit');
+          this.triggerScreenShake();
+        } else {
+          this.audio.playSFX('click', { combo: this.combo });
+        }
+
+        // Increase combo bar energy
+        this.adjustCombo(0.14);
+
+        this.balance += power;
+        this.totalEarned += power;
+
+        // Visual impacts
+        this.coreRenderer.triggerClickImpact(isCrit);
+        this.particles.spawnExplosion(e.clientX, e.clientY, isCrit ? 25 : 14, isCrit, this.superchargeTimer > 0);
+        this.spawnFloatingText(e.clientX, e.clientY, `+${this.formatNumber(power)}`, isCrit);
+
+        this.checkAchievements();
+      }
+
+      adjustCombo(amount) {
+        if (this.isOverloaded) return; 
+        
+        this.combo = Math.min(5.0, this.combo + amount);
+        
+        if (this.combo >= 5.0 && !this.isOverloaded) {
+          this.triggerOverload();
+        }
+
+        clearTimeout(this.comboTimer);
+        this.comboTimer = setTimeout(() => {
+          this.decayCombo();
+        }, 1200);
+      }
+
+      decayCombo() {
+        if (this.isOverloaded) return;
+        
+        this.combo = Math.max(1.0, this.combo - 0.5);
+        if (this.combo > 1.0) {
+          this.comboTimer = setTimeout(() => this.decayCombo(), 600);
+        }
+      }
+
+      triggerOverload() {
+        this.isOverloaded = true;
+        this.overloadDuration = 10.0; // 10 seconds overload
+        this.log('КВАНТОВАЯ ПЕРЕГРУЗКА ЯДРА АКТИВИРОВАНА!', 'warn');
+        this.audio.playSFX('crit');
+        
+        document.getElementById('balance-val').classList.add('overload-flash');
+      }
+
+      endOverload() {
+        this.isOverloaded = false;
+        this.combo = 1.0;
+        document.getElementById('balance-val').classList.remove('overload-flash');
+        this.log('Перегрузка ядра завершена. Охлаждение.', 'system');
+      }
+
+      triggerScreenShake() {
+        const app = document.getElementById('app');
+        app.classList.add('shake');
+        setTimeout(() => app.classList.remove('shake'), 300);
+      }
+
+      spawnFloatingText(x, y, text, isCrit) {
+        const el = document.createElement('div');
+        el.className = `float-dmg ${isCrit ? 'crit' : ''}`;
+        el.textContent = text;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+      }
+
+      /* ----------------------------------------------------
+         CALCULATORS & FORMULAS
+         ---------------------------------------------------- */
+      getClickPower() {
+        let base = 1;
+        this.upgrades.filter(u => u.type === 'active').forEach(upg => {
+          base += upg.count * upg.val;
+        });
+
+        const catalystNode = this.techNodes.find(n => n.id === 'tech_catalyst');
+        const catalystMultiplier = 1 + (catalystNode.count * (catalystNode.multiplier - 1));
+        base *= catalystMultiplier;
+
+        let mult = this.combo;
+        if (this.isOverloaded) mult = 10.0; 
+        
+        if (this.superchargeTimer > 0) {
+          mult *= 5.0;
+        }
+
+        return base * mult;
+      }
+
+      getPPS() {
+        if (this.bossActive) return 0; // Lock automation on active anomaly
+
+        let base = 0;
+        this.upgrades.filter(u => u.type === 'passive').forEach(upg => {
+          base += upg.count * upg.val;
+        });
+
+        const chronoNode = this.techNodes.find(n => n.id === 'tech_chrono');
+        const chronoMultiplier = 1 + (chronoNode.count * (chronoNode.multiplier - 1));
+        base *= chronoMultiplier;
+
+        if (this.superchargeTimer > 0) {
+          base *= 1.5;
+        }
+
+        return base;
+      }
+
+      updateVisualDronesCount() {
+        let count = 0;
+        this.upgrades.filter(u => u.type === 'passive').forEach(u => count += u.count);
+        this.coreRenderer.setDronesVisual(count);
+      }
+
+      /* ----------------------------------------------------
+         MAIN ENGINE LOOP
+         ---------------------------------------------------- */
+      startLoop() {
+        let lastUpdate = performance.now();
+
+        const tick = (now) => {
+          requestAnimationFrame(tick);
+          const dt = (now - lastUpdate) / 1000;
+          lastUpdate = now;
+
+          const currentPPS = this.getPPS();
+          if (currentPPS > 0) {
+            this.balance += currentPPS * dt;
+            this.totalEarned += currentPPS * dt;
+          }
+
+          // Handle active multipliers timers
+          if (this.isOverloaded) {
+            this.overloadDuration -= dt;
+            if (this.overloadDuration <= 0) {
+              this.endOverload();
+            }
+          }
+
+          if (this.superchargeTimer > 0) {
+            this.superchargeTimer -= dt;
+            if (this.superchargeTimer <= 0) {
+              this.coreRenderer.supercharged = false;
+              this.log('Суперзаряд кометы иссяк.', 'system');
+            }
+          }
+
+          // Anomaly countdown spawner
+          if (!this.bossActive) {
+            this.bossTimer -= dt;
+            if (this.bossTimer <= 0) {
+              this.spawnBossAnomaly();
+            }
+          }
+
+          this.updateUI(dt);
+        };
+        requestAnimationFrame(tick);
+
+        // System tick (once per second)
+        setInterval(() => {
+          this.totalSeconds++;
+          this.checkAchievements();
+          this.saveAuto();
+        }, 1000);
+      }
+
+      updateUI(dt) {
+        document.getElementById('balance-val').textContent = this.formatNumber(this.balance);
+        document.getElementById('pps-val').textContent = this.formatNumber(this.getPPS());
+
+        // Combo bar status render
+        const comboBar = document.getElementById('combo-bar');
+        const comboVal = document.getElementById('combo-multiplier-val');
+        if (this.isOverloaded) {
+          comboBar.style.width = '100%';
+          comboBar.style.background = 'linear-gradient(90deg, #ff2d55, #bd00ff)';
+          comboVal.textContent = 'КВАНТОВЫЙ ВЗРЫВ (x10)';
+        } else {
+          const percentage = ((this.combo - 1) / 4) * 100;
+          comboBar.style.width = `${percentage}%`;
+          comboBar.style.background = 'linear-gradient(90deg, var(--accent-blue), var(--accent-pink))';
+          comboVal.textContent = `x${this.combo.toFixed(1)}`;
+        }
+
+        // Collapse values
+        const collapseBtn = document.getElementById('collapse-btn');
+        const prospectiveDM = this.calculateProspectiveDM();
+        if (prospectiveDM >= 1) {
+          collapseBtn.disabled = false;
+          collapseBtn.textContent = `Коллапс Вселенной (+${prospectiveDM} ТМ)`;
+          collapseBtn.style.boxShadow = '0 0 25px var(--glow-pink)';
+        } else {
+          collapseBtn.disabled = true;
+          collapseBtn.textContent = `Требуется 1M+ QE (+0 ТМ)`;
+          collapseBtn.style.boxShadow = 'none';
+        }
+        document.getElementById('darkmatter-val').textContent = this.darkMatter;
+
+        // Upgrades visual pricing check
+        this.upgrades.forEach(upg => {
+          const itemEl = document.getElementById(`upg-${upg.id}`);
+          if (itemEl) {
+            const btnEl = itemEl.querySelector('button');
+            if (this.balance < upg.cost) {
+              itemEl.classList.add('disabled');
+            } else {
+              itemEl.classList.remove('disabled');
+            }
+            btnEl.textContent = this.formatNumber(upg.cost);
+          }
+        });
+
+        // Tech Nodes dark matter check
+        this.techNodes.forEach(node => {
+          const nodeEl = document.getElementById(`tech-${node.id}`);
+          if (nodeEl) {
+            const btnEl = nodeEl.querySelector('button');
+            if (this.darkMatter < node.cost) {
+              nodeEl.classList.add('disabled');
+            } else {
+              nodeEl.classList.remove('disabled');
+            }
+          }
+        });
+
+        // Archive logs update
+        document.getElementById('stat-clicks').textContent = this.clicksCount;
+        document.getElementById('stat-crits').textContent = this.critsCount;
+        document.getElementById('stat-total-qe').textContent = this.formatNumber(this.totalEarned);
+        document.getElementById('stat-comets').textContent = this.cometsCount;
+        document.getElementById('stat-anomalies').textContent = this.anomaliesCount;
+        document.getElementById('stat-prestiged').textContent = this.prestigeCount;
+        document.getElementById('stat-time').textContent = this.formatTime(this.totalSeconds);
+      }
+
+      renderUpgrades() {
+        const activeContainer = document.getElementById('active-upgrades');
+        const passiveContainer = document.getElementById('passive-upgrades');
+        
+        activeContainer.innerHTML = '<h4>Вручную</h4>';
+        passiveContainer.innerHTML = '<h4>Автоматизация</h4>';
+
+        this.upgrades.forEach(upg => {
+          const div = document.createElement('div');
+          div.className = 'upgrade-item';
+          div.id = `upg-${upg.id}`;
+          div.innerHTML = `
+            <div class="upgrade-info">
+              <div class="upgrade-title">
+                ${upg.name} 
+                <span class="upgrade-qty" id="qty-${upg.id}">${upg.count}</span>
+              </div>
+              <div class="upgrade-desc">${upg.desc}</div>
+            </div>
+            <button class="upgrade-btn">${this.formatNumber(upg.cost)}</button>
+          `;
+          
+          div.querySelector('button').addEventListener('click', () => this.buyUpgrade(upg));
+          
+          if (upg.type === 'active') {
+            activeContainer.appendChild(div);
+          } else {
+            passiveContainer.appendChild(div);
+          }
+        });
+      }
+
+      buyUpgrade(upg) {
+        if (this.balance >= upg.cost) {
+          this.balance -= upg.cost;
+          upg.count++;
+          upg.cost = Math.floor(upg.cost * 1.15);
+          
+          this.audio.playSFX('upgrade', { root: upg.type === 'active' ? 300 : 450 });
+          this.renderUpgrades();
+          this.updateVisualDronesCount();
+          this.log(`Улучшение приобретено: ${upg.name} [Ур. ${upg.count}]`, 'system');
+        }
+      }
+
+      /* ----------------------------------------------------
+         BOSS ANOMALIES (MINI-GAME)
+         ---------------------------------------------------- */
+      spawnBossAnomaly() {
+        this.bossActive = true;
+        this.anomaliesFought++;
+        
+        this.bossMaxHP = Math.floor(70 * Math.pow(1.65, this.anomaliesFought));
+        this.bossHP = this.bossMaxHP;
+        
+        const bossNames = [
+          "Гравитационный Зажим Alpha",
+          "Квантовый Вихрь Пространства",
+          "Резонансная Трещина Ядра",
+          "Временная Хроно-Петля",
+          "Световое Искривление Горизонта"
+        ];
+        this.bossName = bossNames[Math.floor(Math.random() * bossNames.length)];
+
+        this.audio.playSFX('boss_alert');
+        this.triggerScreenShake();
+        this.log(`🚨 ВНИМАНИЕ! Обнаружена аномалия: "${this.bossName}" [HP: ${this.bossHP}]! Авто-сборщики перегружены!`, 'warn');
+
+        const bossPanel = document.getElementById('boss-panel');
+        bossPanel.classList.add('active');
+        this.updateBossHPBar();
+      }
+
+      damageBoss() {
+        const dmg = Math.ceil(this.getClickPower());
+        this.bossHP = Math.max(0, this.bossHP - dmg);
+        
+        this.audio.playSFX('click', { combo: 4 });
+        this.triggerScreenShake();
+        
+        const rect = document.getElementById('coreCanvas').getBoundingClientRect();
+        this.particles.spawnExplosion(rect.left + rect.width/2, rect.top + rect.height/2, 8, true);
+        this.spawnFloatingText(rect.left + rect.width/2, rect.top + rect.height/2, `-${dmg} HP`, true);
+
+        this.updateBossHPBar();
+
+        if (this.bossHP <= 0) {
+          this.resolveBossAnomaly();
+        }
+      }
+
+      updateBossHPBar() {
+        const fill = document.getElementById('boss-hp-bar');
+        const text = document.getElementById('boss-hp-text');
+        const percentage = (this.bossHP / this.bossMaxHP) * 100;
+        
+        fill.style.width = `${percentage}%`;
+        text.textContent = `${this.bossHP} / ${this.bossMaxHP} HP`;
+      }
+
+      resolveBossAnomaly() {
+        this.bossActive = false;
+        this.anomaliesCount++;
+        
+        const baseReward = Math.max(100, this.getPPS() * 95);
+        this.balance += baseReward;
+        this.totalEarned += baseReward;
+
+        this.audio.playSFX('crit');
+        this.log(`✨ Аномалия "${this.bossName}" успешно рассеяна! Получена компенсация: +${this.formatNumber(baseReward)} QE!`, 'system');
+
+        document.getElementById('boss-panel').classList.remove('active');
+        
+        this.bossTimer = 120 + Math.random() * 60;
+        this.checkAchievements();
+      }
+
+      /* ----------------------------------------------------
+         QUANTUM COMETS (ACTIVE EVENTS)
+         ---------------------------------------------------- */
+      startCometSpawner() {
+        const spawnTick = () => {
+          const delay = 45000 + Math.random() * 30000;
+          setTimeout(() => {
+            if (!this.bossActive) {
+              this.spawnComet();
+            }
+            spawnTick();
+          }, delay);
+        };
+        spawnTick();
+      }
+
+      spawnComet() {
+        const comet = document.createElement('div');
+        comet.className = 'quantum-comet';
+        document.body.appendChild(comet);
+
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        const startX = Math.random() < 0.5 ? -30 : screenWidth + 30;
+        const startY = Math.random() * (screenHeight - 150) + 50;
+        const endX = startX < 0 ? screenWidth + 30 : -30;
+        const endY = Math.random() * (screenHeight - 150) + 50;
+
+        comet.style.left = `${startX}px`;
+        comet.style.top = `${startY}px`;
+
+        this.audio.playSFX('comet');
+        this.log('💫 Квантовая комета приближается к реактору!', 'system');
+
+        const startTime = performance.now();
+        const duration = 6000;
+
+        const anim = (time) => {
+          if (!comet.parentNode) return; 
+          const elapsed = time - startTime;
+          const progress = elapsed / duration;
+
+          if (progress >= 1) {
+            comet.remove();
+            return;
+          }
+
+          const curX = startX + (endX - startX) * progress;
+          const curY = startY + (endY - startY) * progress;
+
+          comet.style.left = `${curX}px`;
+          comet.style.top = `${curY}px`;
+
+          requestAnimationFrame(anim);
+        };
+        requestAnimationFrame(anim);
+
+        comet.addEventListener('click', () => {
+          this.catchComet(comet);
+        });
+      }
+
+      catchComet(cometEl) {
+        cometEl.remove();
+        this.cometsCount++;
+        
+        this.superchargeTimer = 15.0;
+        this.coreRenderer.supercharged = true;
+        
+        this.audio.playSFX('crit');
+        this.triggerScreenShake();
+        this.log('⚡ КОМЕТА ЗАХВАЧЕНА! Квантовый суперзаряд активирован: клик x5 на 15 секунд!', 'warn');
+
+        const payout = Math.max(50, this.getPPS() * 30);
+        this.balance += payout;
+        this.totalEarned += payout;
+
+        const rect = cometEl.getBoundingClientRect();
+        this.particles.spawnExplosion(rect.left, rect.top, 30, true, true);
+      }
+
+      /* ----------------------------------------------------
+         PRESTIGE SYSTEM (COLLAPSE / REBIRTH)
+         ---------------------------------------------------- */
+      calculateProspectiveDM() {
+        if (this.totalEarned < 1000000) return 0;
+        return Math.floor(Math.sqrt(this.totalEarned / 1000000));
+      }
+
+      triggerCollapse() {
+        const prospectiveDM = this.calculateProspectiveDM();
+        if (prospectiveDM < 1) return;
+
+        if (confirm(`Запустить сжатие сингулярности? Все автоматические коллекторы и текущие запасы QE будут уничтожены в обмен на ${prospectiveDM} Темной Материи.`)) {
+          this.audio.playSFX('collapse');
+          
+          const flash = document.getElementById('screen-overlay');
+          flash.classList.add('collapse-flash');
+          setTimeout(() => flash.classList.remove('collapse-flash'), 1500);
+
+          this.darkMatter += prospectiveDM;
+          this.darkMatterAccumulated += prospectiveDM;
+          this.prestigeCount++;
+
+          // Reset parameters
+          this.balance = 0;
+          this.totalEarned = 0;
+          this.combo = 1.0;
+          this.isOverloaded = false;
+          this.bossActive = false;
+          this.bossTimer = 120;
+
+          document.getElementById('boss-panel').classList.remove('active');
+
+          // Reset upgrades count
+          this.upgrades.forEach(upg => {
+            upg.count = 0;
+            if (upg.id === 'active_1') upg.cost = 15;
+            else if (upg.id === 'active_2') upg.cost = 120;
+            else if (upg.id === 'active_3') upg.cost = 850;
+            else if (upg.id === 'drone_1') upg.cost = 50;
+            else if (upg.id === 'drone_2') upg.cost = 380;
+            else if (upg.id === 'drone_3') upg.cost = 2400;
+            else if (upg.id === 'drone_4') upg.cost = 15000;
+            else if (upg.id === 'drone_5') upg.cost = 95000;
+          });
+
+          this.renderUpgrades();
+          this.renderTechNodes();
+          this.updateVisualDronesCount();
+          this.save();
+
+          this.log(`💫 КОЛЛАПС ЗАВЕРШЕН. Преобразовано материи: +${prospectiveDM} ТМ. Создана новая сингулярность.`, 'prestige');
+          this.checkAchievements();
+        }
+      }
+
+      renderTechNodes() {
+        const container = document.getElementById('tech-upgrades');
+        container.innerHTML = '';
+
+        this.techNodes.forEach(node => {
+          const div = document.createElement('div');
+          div.className = 'tech-item';
+          div.id = `tech-${node.id}`;
+          div.innerHTML = `
+            <div class="upgrade-info">
+              <div class="upgrade-title">
+                ${node.name} <span class="upgrade-qty" style="color:var(--accent-pink); background:rgba(255,0,127,0.08);">${node.count}</span>
+              </div>
+              <div class="upgrade-desc">${node.desc}</div>
+            </div>
+            <button class="tech-buy-btn">${node.cost} ТМ</button>
+          `;
+
+          div.querySelector('button').addEventListener('click', () => this.buyTechNode(node));
+          container.appendChild(div);
+        });
+      }
+
+      buyTechNode(node) {
+        if (this.darkMatter >= node.cost) {
+          this.darkMatter -= node.cost;
+          node.count++;
+          node.cost = Math.floor(node.cost * 1.5) + 1;
+
+          this.audio.playSFX('upgrade', { root: 500 });
+          this.renderTechNodes();
+          this.log(`Узел Темной Материи активирован: ${node.name} [Ур. ${node.count}]`, 'prestige');
+        }
+      }
+
+      /* ----------------------------------------------------
+         ACHIEVEMENTS SYSTEM
+         ---------------------------------------------------- */
+      renderAchievements() {
+        const container = document.getElementById('achievements-list');
+        container.innerHTML = '';
+
+        this.achievements.forEach(ach => {
+          const div = document.createElement('div');
+          div.className = `achievement-item ${ach.unlocked ? 'unlocked' : ''}`;
+          div.id = ach.id;
+          div.innerHTML = `
+            <div class="ach-icon">${ach.icon}</div>
+            <div class="ach-details">
+              <div class="ach-title">${ach.title}</div>
+              <div class="ach-desc">${ach.desc}</div>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+      }
+
+      checkAchievements() {
+        let changed = false;
+        this.achievements.forEach(ach => {
+          if (!ach.unlocked && ach.condition()) {
+            ach.unlocked = true;
+            changed = true;
+            this.audio.playSFX('upgrade', { root: 600 });
+            this.log(`🏆 ДОСТИЖЕНИЕ РАЗБЛОКИРОВАНО: "${ach.title}" - ${ach.desc}`, 'achiev');
+          }
+        });
+
+        if (changed) {
+          this.renderAchievements();
+        }
+      }
+
+      /* ----------------------------------------------------
+         SAVE / LOAD SYSTEM (LOCAL STORAGE & EXPORT/IMPORT)
+         ---------------------------------------------------- */
+      getGameState() {
+        return {
+          balance: this.balance,
+          totalEarned: this.totalEarned,
+          darkMatter: this.darkMatter,
+          darkMatterAccumulated: this.darkMatterAccumulated,
+          prestigeCount: this.prestigeCount,
+          clicksCount: this.clicksCount,
+          critsCount: this.critsCount,
+          cometsCount: this.cometsCount,
+          anomaliesCount: this.anomaliesCount,
+          anomaliesFought: this.anomaliesFought,
+          totalSeconds: this.totalSeconds,
+          upgrades: this.upgrades.map(u => ({ id: u.id, count: u.count, cost: u.cost })),
+          techNodes: this.techNodes.map(n => ({ id: n.id, count: n.count, cost: n.cost })),
+          achievements: this.achievements.map(a => ({ id: a.id, unlocked: a.unlocked })),
+          lastSaveTime: Date.now()
+        };
+      }
+
+      save() {
+        const state = this.getGameState();
+        localStorage.setItem('antigravity_quantum_save', JSON.stringify(state));
+      }
+
+      saveAuto() {
+        if (this.totalSeconds % 10 === 0) {
+          this.save();
+        }
+      }
+
+      load() {
+        const saved = localStorage.getItem('antigravity_quantum_save');
+        if (!saved) return;
+
+        try {
+          const state = JSON.parse(saved);
+          this.balance = state.balance || 0;
+          this.totalEarned = state.totalEarned || 0;
+          this.darkMatter = state.darkMatter || 0;
+          this.darkMatterAccumulated = state.darkMatterAccumulated || 0;
+          this.prestigeCount = state.prestigeCount || 0;
+          this.clicksCount = state.clicksCount || 0;
+          this.critsCount = state.critsCount || 0;
+          this.cometsCount = state.cometsCount || 0;
+          this.anomaliesCount = state.anomaliesCount || 0;
+          this.anomaliesFought = state.anomaliesFought || 0;
+          this.totalSeconds = state.totalSeconds || 0;
+
+          // Restore upgrades
+          if (state.upgrades) {
+            state.upgrades.forEach(su => {
+              const u = this.upgrades.find(item => item.id === su.id);
+              if (u) {
+                u.count = su.count;
+                u.cost = su.cost;
+              }
+            });
+          }
+
+          // Restore tech nodes
+          if (state.techNodes) {
+            state.techNodes.forEach(sn => {
+              const n = this.techNodes.find(item => item.id === sn.id);
+              if (n) {
+                n.count = sn.count;
+                n.cost = sn.cost;
+              }
+            });
+          }
+
+          // Restore achievements
+          if (state.achievements) {
+            state.achievements.forEach(sa => {
+              const a = this.achievements.find(item => item.id === sa.id);
+              if (a) {
+                a.unlocked = sa.unlocked;
+              }
+            });
+          }
+
+          // Calculate offline income
+          if (state.lastSaveTime) {
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - state.lastSaveTime) / 1000);
+            
+            if (elapsedSeconds > 10) {
+              const harvesterNode = this.techNodes.find(n => n.id === 'tech_harvester');
+              const offlineMultiplier = harvesterNode.count * harvesterNode.multiplier;
+              
+              if (offlineMultiplier > 0) {
+                let offlinePPS = 0;
+                this.upgrades.filter(u => u.type === 'passive').forEach(upg => {
+                  offlinePPS += upg.count * upg.val;
+                });
+                
+                const chronoNode = this.techNodes.find(n => n.id === 'tech_chrono');
+                offlinePPS *= 1 + (chronoNode.count * (chronoNode.multiplier - 1));
+
+                const clampedTime = Math.min(43200, elapsedSeconds); // max 12 hours
+                const offlineEarnings = offlinePPS * offlineMultiplier * clampedTime;
+
+                if (offlineEarnings > 0) {
+                  this.balance += offlineEarnings;
+                  this.totalEarned += offlineEarnings;
+                  setTimeout(() => {
+                    this.log(`💤 Автоматизация в оффлайне: Ядро выработало +${this.formatNumber(offlineEarnings)} QE за ${this.formatTime(clampedTime)} оффлайна!`, 'system');
+                  }, 1500);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Ошибка чтения файла сохранения", e);
+        }
+      }
+
+      exportSave() {
+        this.save();
+        const state = this.getGameState();
+        const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+        const tArea = document.getElementById('import-export-area');
+        tArea.value = b64;
+        tArea.select();
+        this.log('Сохранение экспортировано. Код скопирован в окно текста.', 'system');
+      }
+
+      importSave() {
+        const text = document.getElementById('import-export-area').value.trim();
+        if (!text) {
+          alert('Введите код импорта!');
+          return;
+        }
+
+        try {
+          const jsonString = decodeURIComponent(escape(atob(text)));
+          localStorage.setItem('antigravity_quantum_save', jsonString);
+          this.load();
+          this.renderUpgrades();
+          this.renderTechNodes();
+          this.renderAchievements();
+          this.updateVisualDronesCount();
+          this.log('Сохранение успешно импортировано!', 'system');
+        } catch (e) {
+          alert('Ошибка парсинга кода импорта. Проверьте правильность кода.');
+        }
+      }
+
+      hardReset() {
+        if (confirm('ВНИМАНИЕ! Это полностью обнулит весь прогресс, включая накопленную Темную Материю и достижения. Вы действительно хотите стереть память ядра?')) {
+          localStorage.removeItem('antigravity_quantum_save');
+          location.reload();
+        }
+      }
+
+      /* ----------------------------------------------------
+         UTILITIES
+         ---------------------------------------------------- */
+      formatNumber(num) {
+        if (num === 0) return '0';
+        
+        const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp'];
+        const i = Math.floor(Math.log10(num) / 3);
+        
+        if (i < 1) return num.toFixed(1).replace(/\.0$/, '');
+        if (i >= suffixes.length) return num.toExponential(2);
+        
+        const scaled = num / Math.pow(10, i * 3);
+        return scaled.toFixed(2).replace(/\.00$/, '') + suffixes[i];
+      }
+
+      formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        
+        let res = '';
+        if (h > 0) res += `${h} ч. `;
+        if (m > 0 || h > 0) res += `${m} м. `;
+        res += `${s} с.`;
+        return res;
+      }
+
+      log(msg, type = 'system') {
+        const terminal = document.getElementById('terminal-log');
+        const p = document.createElement('p');
+        p.className = type;
+        
+        const time = new Date().toLocaleTimeString();
+        p.textContent = `[${time}] ${msg}`;
+        
+        terminal.appendChild(p);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+    }
+
+    // Launch game on DOM Load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GameEngine();
+    });
+  </script>
+</body>
+</html>
